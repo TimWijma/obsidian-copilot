@@ -1,25 +1,28 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
+import { AIChatView, AI_CHAT_VIEW_TYPE } from './view';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
+interface CopilotPluginSettings {
 	mySetting: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: CopilotPluginSettings = {
 	mySetting: 'default'
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class CopilotPlugin extends Plugin {
+	settings: CopilotPluginSettings;
 
-	async onload() {
-		await this.loadSettings();
+	onload() {
+		this.loadSettings();
+
+		this.registerView(
+			AI_CHAT_VIEW_TYPE,
+			(leaf) => new AIChatView(leaf)
+		);
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		const ribbonIconEl = this.addRibbonIcon('dice', 'AI Chat', (evt: MouseEvent) => {
+			this.activateView();
 		});
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
@@ -65,6 +68,14 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'toggle-ai-chat-view',
+			name: 'Toggle AI Chat View',
+			callback: () => {
+				this.activateView();
+			}
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
@@ -89,6 +100,23 @@ export default class MyPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	async activateView() {
+		this.app.workspace.detachLeavesOfType(AI_CHAT_VIEW_TYPE);
+
+		// Check if there is already a leaf for the view
+		let leaf = this.app.workspace.getRightLeaf(false);
+		if (leaf) {
+			await leaf.setViewState({
+			  type: AI_CHAT_VIEW_TYPE,
+			  active: true,
+			});
+		}
+
+		this.app.workspace.revealLeaf(
+		  this.app.workspace.getLeavesOfType(AI_CHAT_VIEW_TYPE)[0]
+		);
+	  }
 }
 
 class SampleModal extends Modal {
@@ -108,9 +136,9 @@ class SampleModal extends Modal {
 }
 
 class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: CopilotPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: CopilotPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
