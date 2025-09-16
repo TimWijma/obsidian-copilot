@@ -5,6 +5,7 @@ interface CopilotPluginSettings {
 	mySetting: string;
 	openAIapiKey: string;
 	anthropicApiKey: string;
+	geminiApiKey: string;
 	modelName: string;
 }
 
@@ -12,7 +13,8 @@ const DEFAULT_SETTINGS: CopilotPluginSettings = {
 	mySetting: 'default',
 	openAIapiKey: '',
 	anthropicApiKey: '',
-	modelName: 'gpt-5-mini',
+	geminiApiKey: '',
+	modelName: 'openai/gpt-5-mini',
 }
 
 export default class CopilotPlugin extends Plugin {

@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import CopilotPlugin from "./main";
-import { generateText, ModelMessage, streamText } from "ai";
+import { ModelMessage, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 
 export const AI_CHAT_VIEW_TYPE = "ai-chat-view";
@@ -22,6 +22,31 @@ export class AIChatView extends ItemView {
     return "AI Chat";
   }
 
+  getLLMProvider() {
+    let { modelName } = this.plugin.settings;
+    const [provider = "openai", model = "gpt-4o-mini"] = modelName.split("/");
+
+    if (provider === "openai") {
+      const { createOpenAI } = require("@ai-sdk/openai");
+      return [createOpenAI({
+        apiKey: this.plugin.settings.openAIapiKey,
+      }), model];
+    } else if (provider === "anthropic") {
+      const { createAnthropic } = require("@ai-sdk/anthropic");
+      return [createAnthropic({
+        apiKey: this.plugin.settings.anthropicApiKey,
+      }), model];
+    } else if (provider === "gemini") {
+      const { createGemini } = require("@ai-sdk/google");
+      return [createGemini({
+        apiKey: this.plugin.settings.geminiApiKey,
+      }), model];
+    } else {
+      throw new Error(`Unsupported provider: ${provider}`);
+    }
+  }
+
+
   async onOpen() {
     const container = this.containerEl.children[1];
     container.empty();
@@ -41,9 +66,10 @@ export class AIChatView extends ItemView {
         input.value = "";
 
         try {
-          const openai = createOpenAI({
-            apiKey: this.plugin.settings.openAIapiKey,
-          });
+          // const openai = createOpenAI({
+          //   apiKey: this.plugin.settings.openAIapiKey,
+          // });
+          const [llm, model] = this.getLLMProvider();
 
           this.messages.push({ role: "user", content: message });
 
@@ -52,7 +78,7 @@ export class AIChatView extends ItemView {
           //   messages: this.messages,
           // });
           const { textStream } = streamText({
-            model: openai(this.plugin.settings.modelName),
+            model: llm(model),
             messages: this.messages,
           });
 
