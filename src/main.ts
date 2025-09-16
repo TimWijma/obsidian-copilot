@@ -3,10 +3,16 @@ import { AIChatView, AI_CHAT_VIEW_TYPE } from './view';
 
 interface CopilotPluginSettings {
 	mySetting: string;
+	openAIapiKey: string;
+	anthropicApiKey: string;
+	modelName: string;
 }
 
 const DEFAULT_SETTINGS: CopilotPluginSettings = {
-	mySetting: 'default'
+	mySetting: 'default',
+	openAIapiKey: '',
+	anthropicApiKey: '',
+	modelName: 'gpt-5-mini',
 }
 
 export default class CopilotPlugin extends Plugin {
@@ -17,7 +23,7 @@ export default class CopilotPlugin extends Plugin {
 
 		this.registerView(
 			AI_CHAT_VIEW_TYPE,
-			(leaf) => new AIChatView(leaf)
+			(leaf) => new AIChatView(leaf, this)
 		);
 
 		// This creates an icon in the left ribbon.
@@ -77,7 +83,7 @@ export default class CopilotPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new CopilotSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -135,7 +141,7 @@ class SampleModal extends Modal {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
+class CopilotSettingTab extends PluginSettingTab {
 	plugin: CopilotPlugin;
 
 	constructor(app: App, plugin: CopilotPlugin) {
@@ -156,6 +162,39 @@ class SampleSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.mySetting)
 				.onChange(async (value) => {
 					this.plugin.settings.mySetting = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('OpenAI API Key')
+			.setDesc('Your OpenAI API Key')
+			.addText(text => text
+				.setPlaceholder('Enter your OpenAI API Key')
+				.setValue(this.plugin.settings.openAIapiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.openAIapiKey = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Anthropic API Key')
+			.setDesc('Your Anthropic API Key')
+			.addText(text => text
+				.setPlaceholder('Enter your Anthropic API Key')
+				.setValue(this.plugin.settings.anthropicApiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.anthropicApiKey = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Model Name')
+			.setDesc('The AI model to use')
+			.addText(text => text
+				.setPlaceholder('Enter model name (e.g., gpt-5-mini)')
+				.setValue(this.plugin.settings.modelName)
+				.onChange(async (value) => {
+					this.plugin.settings.modelName = value;
 					await this.plugin.saveSettings();
 				}));
 	}
