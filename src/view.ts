@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import CopilotPlugin from "./main";
-import { generateText, ModelMessage } from "ai";
+import { generateText, ModelMessage, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 
 export const AI_CHAT_VIEW_TYPE = "ai-chat-view";
@@ -25,12 +25,13 @@ export class AIChatView extends ItemView {
   async onOpen() {
     const container = this.containerEl.children[1];
     container.empty();
-    container.createEl("h4", { text: "AI Chat" });
+    const mainContainer = container.createDiv({ cls: "container" });
+    mainContainer.createEl("h4", { text: "AI Chat" });
 
-    const chatContainer = container.createDiv({ cls: "chat-container" });
+    const chatContainer = mainContainer.createDiv({ cls: "chat-container" });
 
-    const input = container.createEl("input", { type: "text", placeholder: "Ask a question..." });
-    const sendButton = container.createEl("button", { text: "Send" });
+    const input = mainContainer.createEl("input", { type: "text", cls: "chat-input", placeholder: "Ask a question..." });
+    const sendButton = mainContainer.createEl("button", { text: "Send", cls: "chat-send-button" });
 
     sendButton.onClickEvent(async () => {
       const message = input.value;
@@ -46,17 +47,27 @@ export class AIChatView extends ItemView {
 
           this.messages.push({ role: "user", content: message });
 
-          const response = await generateText({
+          // const response = await generateText({
+          //   model: openai(this.plugin.settings.modelName),
+          //   messages: this.messages,
+          // });
+          const { textStream } = streamText({
             model: openai(this.plugin.settings.modelName),
             messages: this.messages,
           });
 
-          console.log("AI response:", response);
+          const botMessage = chatContainer.createDiv({ cls: "chat-message bot-message" });
+          const botParagraph = botMessage.createEl("p", { text: "" });
 
+          let response = { text: "" };
+          for await (const chunk of textStream) {
+            console.log("Received chunk:", chunk);
+            response.text += chunk;
+            botParagraph.setText(response.text); // Update the text as chunks arrive
+          }
+          
           this.messages.push({ role: "assistant", content: response.text });
 
-          const botMessage = chatContainer.createDiv({ cls: "chat-message bot-message" });
-          botMessage.createEl("p", { text: response.text });
         } catch (error) {
           console.error("Error calling AI:", error);
           const botMessage = chatContainer.createDiv({ cls: "chat-message bot-message" });
